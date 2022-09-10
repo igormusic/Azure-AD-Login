@@ -12,7 +12,13 @@ namespace TVMAzureAd
     public interface IAzureLogin
     {
 
-        String Login(string ClientId, string Tenant, string Instance);
+        bool Login(string ClientId, string Tenant, string Instance);
+
+        string AccessToken { get; }
+
+        string ErrorMessage { get; }
+
+        string UserName { get; }
     }
 
     [ComVisible(true)]
@@ -20,17 +26,26 @@ namespace TVMAzureAd
     public class AzureLogin:IAzureLogin
     {
         string[] scopes = new string[] { "user.read" };
+        private string _accessToken;
+        private string _errorMessage;
+        private string _userName;
 
         public AzureLogin() {
  
         }
 
+        [ComVisible(true)]
+        public string AccessToken => _accessToken;
+        [ComVisible(true)]
+        public string ErrorMessage => _errorMessage;
+        [ComVisible(true)]
+        public string UserName => _userName;
 
         [ComVisible(true)]
-        public String Login(string ClientId, string Tenant, string Instance) {
+        bool IAzureLogin.Login(string ClientId, string Tenant, string Instance)
+        {
 
-            String result = "failed";
-
+            bool result;
             try
             {
                 var builder = PublicClientApplicationBuilder.Create(ClientId)
@@ -46,14 +61,24 @@ namespace TVMAzureAd
 
                 var taskResult = task.GetAwaiter().GetResult();
 
-                result = taskResult.AccessToken;
+                _accessToken = taskResult.AccessToken;
+
+                if (taskResult.Account != null)
+                {
+                    _userName = taskResult.Account.Username;
+
+                }
+
+                result = true;
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = ex.Message;
+                result = false;
 
             }
-            catch (Exception ex) {
-                result = "ex:" + ex.Message;
-            }
+
             return result;
-
         }
     }
 }
